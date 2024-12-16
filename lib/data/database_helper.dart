@@ -67,4 +67,45 @@ class DatabaseHelper {
       whereArgs: [id],
     );
   }
+
+  // Fetch products with low stock
+  Future<List<Product>> fetchLowStockProducts(int threshold) async {
+    final db = await instance.database;
+    final maps = await db.query(
+      'products',
+      where: 'quantity < ?',
+      whereArgs: [threshold],
+    );
+    return maps.map((map) => Product.fromMap(map)).toList();
+  }
+
+  // Fetch expired products
+  Future<List<Product>> fetchExpiredProducts(String currentDate) async {
+    final db = await instance.database;
+    final maps = await db.query(
+      'products',
+      where: 'expiryDate < ?',
+      whereArgs: [currentDate],
+    );
+    return maps.map((map) => Product.fromMap(map)).toList();
+  }
+
+  // Fetch total stock
+  Future<int> fetchTotalStock() async {
+    final db = await instance.database;
+    final result =
+        await db.rawQuery('SELECT SUM(quantity) AS total FROM products');
+    return result.first['total'] as int;
+  }
+
+  // Search products
+  Future<List<Product>> searchProducts(String keyword) async {
+    final db = await instance.database;
+    final maps = await db.query(
+      'products',
+      where: 'name LIKE ? OR location LIKE ?',
+      whereArgs: ['%$keyword%', '%$keyword%'],
+    );
+    return maps.map((map) => Product.fromMap(map)).toList();
+  }
 }

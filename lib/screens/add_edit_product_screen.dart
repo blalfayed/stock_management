@@ -6,23 +6,92 @@ import '../provider/provider.dart';
 
 class AddEditProductScreen extends StatefulWidget {
   final Product? product;
+
   const AddEditProductScreen({super.key, this.product});
 
   @override
-  State<AddEditProductScreen> createState() => _AddEditProductScreenState();
+  _AddEditProductScreenState createState() => _AddEditProductScreenState();
 }
 
 class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _formKey = GlobalKey<FormState>();
-  late String _name;
-  late int _quantity;
-  late double _price;
-  late String _location;
-  late String _expiryDate;
+  late TextEditingController _nameController;
+  late TextEditingController _quantityController;
+  late TextEditingController _priceController;
+  late TextEditingController _locationController;
+  late TextEditingController _expiryDateController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.product?.name ?? '');
+    _quantityController =
+        TextEditingController(text: widget.product?.quantity.toString() ?? '');
+    _priceController =
+        TextEditingController(text: widget.product?.price.toString() ?? '');
+    _locationController =
+        TextEditingController(text: widget.product?.location ?? '');
+    _expiryDateController =
+        TextEditingController(text: widget.product?.expiryDate ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _quantityController.dispose();
+    _priceController.dispose();
+    _locationController.dispose();
+    _expiryDateController.dispose();
+    super.dispose();
+  }
+
+  void _saveProduct() {
+    if (_formKey.currentState!.validate()) {
+      final name = _nameController.text;
+      final quantity = int.tryParse(_quantityController.text) ?? 0;
+      final price = double.tryParse(_priceController.text) ?? 0.0;
+      final location = _locationController.text;
+      final expiryDate = _expiryDateController.text;
+
+      final product = Product(
+        id: widget.product?.id,
+        name: name,
+        quantity: quantity,
+        price: price,
+        location: location,
+        expiryDate: expiryDate,
+      );
+
+      final provider = Provider.of<ProductProvider>(context, listen: false);
+
+      if (widget.product == null) {
+        provider.addProduct(product);
+      } else {
+        provider.updateProduct(product);
+      }
+
+      Navigator.pop(context);
+    }
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _expiryDateController.text =
+            '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<ProductProvider>(context, listen: false);
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.product == null ? 'Add Product' : 'Edit Product'),
@@ -31,83 +100,78 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: Column(
+          child: ListView(
             children: [
               TextFormField(
-                initialValue: widget.product?.name,
-                decoration: const InputDecoration(labelText: 'Name'),
-                validator: (value) =>
-                    value!.isEmpty ? 'Enter product name' : null,
-                onSaved: (value) => _name = value!,
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Product Name'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a product name';
+                  }
+                  return null;
+                },
               ),
               TextFormField(
-                initialValue: widget.product?.quantity.toString(),
+                controller: _quantityController,
                 decoration: const InputDecoration(labelText: 'Quantity'),
-                validator: (value) => value!.isEmpty ? 'Enter quantity' : null,
-                onSaved: (value) => _quantity = int.parse(value!),
                 keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter the quantity';
+                  }
+                  if (int.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
               ),
               TextFormField(
-                initialValue: widget.product?.price.toString(),
+                controller: _priceController,
                 decoration: const InputDecoration(labelText: 'Price'),
-                validator: (value) => value!.isEmpty ? 'Enter price' : null,
-                onSaved: (value) => _price = double.parse(value!),
-                keyboardType: TextInputType.number,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter the price';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
               ),
               TextFormField(
-                initialValue: widget.product?.location,
+                controller: _locationController,
                 decoration: const InputDecoration(labelText: 'Location'),
-                validator: (value) => value!.isEmpty ? 'Enter location' : null,
-                onSaved: (value) => _location = value!,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a location';
+                  }
+                  return null;
+                },
               ),
               TextFormField(
-                initialValue: widget.product?.expiryDate,
+                controller: _expiryDateController,
                 decoration: const InputDecoration(
-                    labelText: 'Expiry Date (YYYY-MM-DD)'),
-                validator: (value) =>
-                    value!.isEmpty ? 'Enter expiry date' : null,
-                onSaved: (value) => _expiryDate = value!,
+                  labelText: 'Expiry Date',
+                  hintText: 'YYYY-MM-DD',
+                ),
+                readOnly: true,
+                onTap: () => _selectDate(context),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select an expiry date';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _formKey.currentState!.save();
-                    final newProduct = Product(
-                      id: widget.product?.id,
-                      name: _name,
-                      quantity: _quantity,
-                      price: _price,
-                      location: _location,
-                      expiryDate: _expiryDate,
-                    );
-
-                    if (widget.product == null) {
-                      // Adding new product
-                      provider.addProduct(newProduct);
-                    } else {
-                      // Updating existing product
-                      provider.updateProduct(newProduct);
-                    }
-
-                    Navigator.of(context)
-                        .pop(); // Return to product list screen
-                  }
-                },
+                onPressed: _saveProduct,
                 child: Text(
                     widget.product == null ? 'Add Product' : 'Save Changes'),
               ),
-              const SizedBox(height: 10),
-              if (widget.product != null)
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  onPressed: () {
-                    provider.deleteProduct(widget.product!.id!);
-                    Navigator.of(context)
-                        .pop(); // Return to product list screen
-                  },
-                  child: const Text('Delete Product'),
-                ),
             ],
           ),
         ),

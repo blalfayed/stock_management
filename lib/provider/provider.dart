@@ -28,4 +28,25 @@ class ProductProvider with ChangeNotifier {
     await _dbHelper.deleteProduct(id);
     await loadProducts();
   }
+
+  // Fetch low stock products
+  Future<List<Product>> fetchLowStockProducts(int threshold) async {
+    return await _dbHelper.fetchLowStockProducts(threshold);
+  }
+
+  // Fetch expired products
+  Future<List<Product>> fetchExpiredProducts(String currentDate) async {
+    return await _dbHelper.fetchExpiredProducts(currentDate);
+  }
+
+  // Fetch total stock
+  Future<int> fetchTotalStock() async {
+    return await _dbHelper.fetchTotalStock();
+  }
+
+  // Search products
+  Future<void> searchProducts(String keyword) async {
+    _products = await _dbHelper.searchProducts(keyword);
+    notifyListeners();
+  }
 }

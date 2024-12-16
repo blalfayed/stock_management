@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../provider/provider.dart';
 import 'add_edit_product_screen.dart';
+import 'product_search_delegate.dart';
 
 class ProductListScreen extends StatelessWidget {
   const ProductListScreen({super.key});
@@ -12,7 +12,20 @@ class ProductListScreen extends StatelessWidget {
     final provider = Provider.of<ProductProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Products')),
+      appBar: AppBar(
+        title: const Text('Products'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () async {
+              showSearch(
+                context: context,
+                delegate: ProductSearchDelegate(provider: provider),
+              );
+            },
+          ),
+        ],
+      ),
       body: provider.products.isEmpty
           ? const Center(child: Text('No products available.'))
           : ListView.builder(
